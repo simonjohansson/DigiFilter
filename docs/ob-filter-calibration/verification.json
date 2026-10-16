@@ -1,0 +1,304 @@
+{
+  "revisions": {
+    "Before": "404f72fa3a5dc62df06d8a5fa450f83dd72b70fe",
+    "After": "5e4f15b32c078876c38e13fa71f3010fbe155455"
+  },
+  "sample_rate": 48000,
+  "step_samples": 262144,
+  "step_amplitude_q31": 33554432,
+  "normalization": "output / input / 0.25, applied equally to every curve",
+  "native_mode": "linear validation flag, below self-oscillation; not a nonlinear spectrum",
+  "max_db_error_above_minus45db": 0.030592420206217774,
+  "checks": [
+    {
+      "version": "Before",
+      "tag": "cutoff_32",
+      "tap": 4,
+      "freq_index": 32,
+      "reso": 0,
+      "corner_hz": 40.10501328674724,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.022320380979238053
+    },
+    {
+      "version": "After",
+      "tag": "cutoff_32",
+      "tap": 4,
+      "freq_index": 32,
+      "reso": 0,
+      "corner_hz": 345.7772057276398,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.0007578660192137932
+    },
+    {
+      "version": "Before",
+      "tag": "cutoff_64",
+      "tap": 4,
+      "freq_index": 64,
+      "reso": 0,
+      "corner_hz": 327.0,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.005145514098266801
+    },
+    {
+      "version": "After",
+      "tag": "cutoff_64",
+      "tap": 4,
+      "freq_index": 64,
+      "reso": 0,
+      "corner_hz": 2696.2176458211184,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.0008700664734604402
+    },
+    {
+      "version": "Before",
+      "tag": "cutoff_96",
+      "tap": 4,
+      "freq_index": 96,
+      "reso": 0,
+      "corner_hz": 2666.2252730217856,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.000535646812480195
+    },
+    {
+      "version": "After",
+      "tag": "cutoff_96",
+      "tap": 4,
+      "freq_index": 96,
+      "reso": 0,
+      "corner_hz": 9075.984554646273,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 8.835409805385552e-05
+    },
+    {
+      "version": "Before",
+      "tag": "cutoff_32",
+      "tap": 2,
+      "freq_index": 32,
+      "reso": 0,
+      "corner_hz": 40.10501328674724,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.013938139076316247
+    },
+    {
+      "version": "After",
+      "tag": "cutoff_32",
+      "tap": 2,
+      "freq_index": 32,
+      "reso": 0,
+      "corner_hz": 345.7772057276398,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.0016120648198523213
+    },
+    {
+      "version": "Before",
+      "tag": "cutoff_64",
+      "tap": 2,
+      "freq_index": 64,
+      "reso": 0,
+      "corner_hz": 327.0,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.0019942107853836433
+    },
+    {
+      "version": "After",
+      "tag": "cutoff_64",
+      "tap": 2,
+      "freq_index": 64,
+      "reso": 0,
+      "corner_hz": 2696.2176458211184,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.00014353052710802672
+    },
+    {
+      "version": "Before",
+      "tag": "cutoff_96",
+      "tap": 2,
+      "freq_index": 96,
+      "reso": 0,
+      "corner_hz": 2666.2252730217856,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.00015804912422368034
+    },
+    {
+      "version": "After",
+      "tag": "cutoff_96",
+      "tap": 2,
+      "freq_index": 96,
+      "reso": 0,
+      "corner_hz": 9075.984554646273,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 9.312465548561022e-05
+    },
+    {
+      "version": "Before",
+      "tag": "resonance_0",
+      "tap": 4,
+      "freq_index": 81.04557794336353,
+      "reso": 0,
+      "corner_hz": 999.9999999999999,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.008408235606587766
+    },
+    {
+      "version": "After",
+      "tag": "resonance_0",
+      "tap": 4,
+      "freq_index": 45.88576461683131,
+      "reso": 0,
+      "corner_hz": 1000.0000000000005,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.008193465214738183
+    },
+    {
+      "version": "Before",
+      "tag": "resonance_32",
+      "tap": 4,
+      "freq_index": 81.04557794336353,
+      "reso": 32,
+      "corner_hz": 999.9999999999999,
+      "feedback": 1.058267716535433,
+      "max_db_error_above_minus45db": 0.005312285486986923
+    },
+    {
+      "version": "After",
+      "tag": "resonance_32",
+      "tap": 4,
+      "freq_index": 45.88576461683131,
+      "reso": 32,
+      "corner_hz": 1000.0000000000005,
+      "feedback": 0.6348812697625394,
+      "max_db_error_above_minus45db": 0.006652103844512425
+    },
+    {
+      "version": "Before",
+      "tag": "resonance_64",
+      "tap": 4,
+      "freq_index": 81.04557794336353,
+      "reso": 64,
+      "corner_hz": 999.9999999999999,
+      "feedback": 2.116535433070866,
+      "max_db_error_above_minus45db": 0.007119242185599006
+    },
+    {
+      "version": "After",
+      "tag": "resonance_64",
+      "tap": 4,
+      "freq_index": 45.88576461683131,
+      "reso": 64,
+      "corner_hz": 1000.0000000000005,
+      "feedback": 2.539525079050158,
+      "max_db_error_above_minus45db": 0.007359518650131847
+    },
+    {
+      "version": "Before",
+      "tag": "resonance_78",
+      "tap": 4,
+      "freq_index": 81.04557794336353,
+      "reso": 78,
+      "corner_hz": 999.9999999999999,
+      "feedback": 2.5795275590551183,
+      "max_db_error_above_minus45db": 0.008555680066821836
+    },
+    {
+      "version": "After",
+      "tag": "resonance_78",
+      "tap": 4,
+      "freq_index": 45.88576461683131,
+      "reso": 78,
+      "corner_hz": 1000.0000000000005,
+      "feedback": 3.7720875441750885,
+      "max_db_error_above_minus45db": 0.030592420206217774
+    },
+    {
+      "version": "Before",
+      "tag": "resonance_0",
+      "tap": 2,
+      "freq_index": 81.04557794336353,
+      "reso": 0,
+      "corner_hz": 999.9999999999999,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.004265228956676026
+    },
+    {
+      "version": "After",
+      "tag": "resonance_0",
+      "tap": 2,
+      "freq_index": 45.88576461683131,
+      "reso": 0,
+      "corner_hz": 1000.0000000000005,
+      "feedback": 0.0,
+      "max_db_error_above_minus45db": 0.004060771719878176
+    },
+    {
+      "version": "Before",
+      "tag": "resonance_32",
+      "tap": 2,
+      "freq_index": 81.04557794336353,
+      "reso": 32,
+      "corner_hz": 999.9999999999999,
+      "feedback": 1.058267716535433,
+      "max_db_error_above_minus45db": 0.004203848183784942
+    },
+    {
+      "version": "After",
+      "tag": "resonance_32",
+      "tap": 2,
+      "freq_index": 45.88576461683131,
+      "reso": 32,
+      "corner_hz": 1000.0000000000005,
+      "feedback": 0.6348812697625394,
+      "max_db_error_above_minus45db": 0.005615438620388602
+    },
+    {
+      "version": "Before",
+      "tag": "resonance_64",
+      "tap": 2,
+      "freq_index": 81.04557794336353,
+      "reso": 64,
+      "corner_hz": 999.9999999999999,
+      "feedback": 2.116535433070866,
+      "max_db_error_above_minus45db": 0.004849316117060132
+    },
+    {
+      "version": "After",
+      "tag": "resonance_64",
+      "tap": 2,
+      "freq_index": 45.88576461683131,
+      "reso": 64,
+      "corner_hz": 1000.0000000000005,
+      "feedback": 2.539525079050158,
+      "max_db_error_above_minus45db": 0.005848486140003217
+    },
+    {
+      "version": "Before",
+      "tag": "resonance_78",
+      "tap": 2,
+      "freq_index": 81.04557794336353,
+      "reso": 78,
+      "corner_hz": 999.9999999999999,
+      "feedback": 2.5795275590551183,
+      "max_db_error_above_minus45db": 0.007016790038536946
+    },
+    {
+      "version": "After",
+      "tag": "resonance_78",
+      "tap": 2,
+      "freq_index": 45.88576461683131,
+      "reso": 78,
+      "corner_hz": 1000.0000000000005,
+      "feedback": 3.7720875441750885,
+      "max_db_error_above_minus45db": 0.02895587107301978
+    }
+  ],
+  "source_sha256": {
+    "Before/ob1_vcf.c": "a86089a5c23feb7c9776596f4482cf5b07526e4a3ebb5059c481e68d7aad7449",
+    "Before/ob1_vcf.h": "e46691c332bc5c6053bec7042dd06405d36cd4f0b572713420231017471b9abe",
+    "Before/ob1_tables.h": "3b66aac65c3fd97c68933233eb1fc27d47d50a8ada3af1b9326d8f16f54cfcc1",
+    "Before/tests/ob1_model.py": "5190cb3602cad9b22074a60c84efd14b92236c59ef6d548990f9be3184dad9ba",
+    "After/ob1_vcf.c": "21002548f6c420d5c07a85f73051cf0bed7ade107943279d56b58253d01ad128",
+    "After/ob1_vcf.h": "cae76f714e76d337bf57a620ee376e15f25de9d795fdff89fa4a005f52d03f0b",
+    "After/ob1_tables.h": "08f57fc2e4cac570ce15ff1106f69d51c48218600709cd2699b1b8658fd14fa0",
+    "After/tests/ob1_model.py": "8d9b3a49711ca20cd4a3863060115de611713aeb1fa8d437129f715e74cb6365"
+  }
+}
