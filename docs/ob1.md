@@ -7,9 +7,11 @@ track's FREQ, RESO and filter envelope as the other types do. This page is how t
 the README has how to use them.
 
 FREQ now selects 64 nominal semitone-spaced base settings, held at about 64.69 Hz.
-The envelope and LFO remain continuous. The base range is approximately 51.5 Hz–1.96 kHz,
-with the existing 327 Hz midpoint retained as a calibration reference. This changes
-existing OB4/OB2 sounds; see [the programmer and cutoff model](ob1-programmer.md).
+The envelope and LFO remain continuous. The highest setting retains the previous
+fully-open endpoint: per-stage corners span approximately 535 Hz–20.36 kHz. At zero
+resonance, the overall -3 dB range is 233 Hz–16.22 kHz for OB4 and 344 Hz–18.49 kHz
+for OB2. These are Digitakt calibration choices, not measured original OB-1 endpoints.
+This changes existing OB4/OB2 sounds; see [the programmer and cutoff model](ob1-programmer.md).
 
 ## The circuit
 

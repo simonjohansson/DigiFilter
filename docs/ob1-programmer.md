@@ -238,10 +238,14 @@ d = floor(clamp(w, 0, 127*256) * 63 / (127*256) + 0.5)
 
 This is an encoder mapping, not a claim about the original pot ADC's thresholds.
 The DAC intervals are normalized so that the nominal binary LSB is a semitone; the
-301K network's small low-bit correction is retained. Code 32 keeps the old FREQ 64
-reference at 327 Hz. This gives a nominal unmodulated base range of 51.496..1959.638 Hz
-after 8.8-index rounding, with adjacent targets 99.781..100.225 cents apart.
-Original-unit absolute pitch and reachable pot codes are not established by this choice.
+301K network's small low-bit correction is retained. Code 63 keeps the old FREQ 127
+fully-open endpoint. This gives a nominal unmodulated **per-stage corner** range of
+535.017..20359.461 Hz after 8.8-index rounding, with adjacent targets
+99.781..100.225 cents apart. At zero resonance the overall -3 dB range is approximately
+232.799..16219.090 Hz in OB4 and 344.416..18486.383 Hz in OB2. Keeping semitone spacing
+and the open endpoint raises the lower endpoint too; continuous modulation can still
+close the filter further. Original-unit absolute pitch and reachable pot codes are
+not established by this Digitakt calibration choice.
 
 The controller samples raw engine FREQ once per nominal scan frame. Changes arriving
 through that field take the stepped base path; the new checks inject them directly,
@@ -283,6 +287,63 @@ and the kernel's physical-cutoff interface remain unchanged. The existing four-s
 coefficient ramp is retained as an acquisition approximation; its 32-sample duration
 is not a measured original-hardware settling time. Leakage, switching glitches and exact
 within-block conversion/acquisition timing remain outside this implementation.
+
+### Cutoff range correction (2026-10-16)
+
+Physical Digitakt listening exposed a maximum cutoff around 1 kHz. The first stepped
+mapping retained Digitakt's stock 327 Hz midpoint while narrowing the span. This
+mistakenly limited the per-stage corner to 1959.638 Hz and the overall zero-resonance
+-3 dB point to about 856 Hz in OB4 / 1265 Hz in OB2. The original owner's manual
+explicitly describes fully clockwise as minimum filtering with maximum available
+harmonics. The five-octave span constrains the width, not the absolute placement.
+
+The corrected mapping anchors the highest code to the previous FREQ 127 endpoint,
+without changing spacing, scan timing, the DSP kernel or coefficient tables.
+`ob1_control_check.py` now measures the host-compiled kernel's audio output at maximum
+FREQ, RESO zero and no modulation. It failed on the old mapping (3.99 dB loss at
+1 kHz) and passes after the correction:
+
+| Frequency | OB4 loss | OB2 loss |
+|---|---|---|
+| 1 kHz | 0.004 dB | 0.002 dB |
+| 5 kHz | 0.118 dB | 0.059 dB |
+| 10 kHz | 0.593 dB | 0.297 dB |
+| 15 kHz | 2.156 dB | 1.078 dB |
+
+These losses are relative to the passband, excluding the existing 0.25 output gain.
+The fully-open setting remains a lowpass; it is not a bypass or perfectly flat to
+Nyquist. For the implemented bilinear one-poles at zero resonance:
+
+```text
+f_minus3 = Fs/pi * atan(tan(pi*f_stage/Fs) * sqrt(2**(1/tap) - 1))
+tap = 4 for OB4, 2 for OB2; Fs = 48000 Hz
+```
+
+This uses the half-power convention (-3.0103 dB). A stage corner or self-oscillation
+frequency is not the complete low-resonance filter's -3 dB cutoff.
+
+The original `tests/spice/ob1_vcf.cir` was also rerun at zero resonance, with explicit
+bias-current fixtures for the old and corrected stage corners. Both output taps agree
+with the response model within 0.06 dB at the four frequencies above after mapping the
+analog frequency axis through the implemented bilinear transform. Local decks, logs
+and results are in `work/cutoff-open/`. The OTA/follower model is idealized, and these
+bias fixtures do not establish the original programmer-to-frequency calibration.
+
+Exact original Hz endpoints remain unverified. The manual specifies centered fine
+and performance controls for setup, but no endpoint frequencies. Synthesizer drawing
+1342/1 has scale/offset trims T15/T16; neither calibrated position is specified.
+Fine tune and the performance VCF control also shift the range independently of FF.
+The downloaded Series Circuits V2 scan contains drawings, not alignment instructions.
+[Musicparts lists a handwritten OB-1 calibration guide](https://www.musicparts.com/products9d99.html?Company=Oberheim)
+whose contents and provenance remain unverified.
+
+For original-unit matching, obtain an alignment target or a controlled capture: record
+unit/revision and calibration history; use manual mode, centered fine/performance
+controls, keyboard tracking off, modulation depth zero and no pedal/bend input. Hold
+the VCA open with oscillator/noise inputs off and measure a quiet self-oscillation
+sweep at the lowest, middle and highest stable knob settings in both directions.
+Count reachable steps and pitch ratios; separately measure the low-resonance response
+with an external low-level sweep. These captures remain pending.
 
 ## Numerical check and remaining work
 
@@ -362,8 +423,33 @@ shortcuts and idle skipping, with the DDR model and OS-specific kit/track addres
 Local reports, input scripts, screenshots and fixture runners are under
 `work/firmware-check/`, including `os1.53/report.json`, `os1.54/report.json` and
 `SUMMARY.md`. The SDK separately verifies the checksums that this public copy of
-digiemu omits. Physical flashing/listening, sequencer lock/slide UI validation,
-and original OB-1 settling/absolute calibration measurements remain untested.
+digiemu omits. Subsequent physical listening exposed the range defect described
+above. Sequencer lock/slide UI validation and original OB-1 settling/absolute
+calibration measurements remain pending.
+
+### Corrected endpoint firmware checks (2026-10-16)
+
+The corrected mapping passed the all-word/spacing/timing check, the new host-kernel
+open-response regression, the programmer's SPICE check, and the existing model,
+kernel and artefact checks. Linked ColdFire checks passed on OS 1.53 and 1.54,
+including both taps, all voices, modulation, re-entry and full-scale resonant sweeps
+(worst host/ColdFire difference 4.49e-5 of block peak).
+
+New Core 4.0 + DigiFilter firmware marked `STP2` passed both OS SDK builds, link and
+checksum/in-place unpack verification, fresh bootstrap and strict cold boot, a bounded
+50 ms timed session, real encoder endpoints/intermediate held bases, and the existing
+UI-to-audio and response-curve fixtures. There were no new strict violations; the
+same stock boot read from address zero remains marked `in_stock`.
+
+The repeated eight-voice fixture rendered 449 blocks per voice with full-scale input,
+RESO 127 and moving cutoff: estimated minimum margin 28.40% on 1.53 / 28.23% on 1.54,
+with no missed deadlines. These remain emulator estimates, not hardware measurements.
+The earlier long panel tour and save/reload checks were not repeated for this mapping
+correction. Physical listening of `STP2` remains pending.
+
+Reports and local runners are in `work/cutoff-open/`; the new test images, hashes and
+test instructions are in `out/ob1-stepping-open-test/`. The earlier `STEP` package is
+preserved separately and contains the defective range.
 
 Before #12 can supply an implementation-ready quantizer:
 

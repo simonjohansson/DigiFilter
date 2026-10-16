@@ -8,8 +8,32 @@ import tempfile
 
 import ob1_model as M
 import ob1_programmer as P
+from ob1_check import build as host_kernel
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def check_open_response(cutoff8):
+    kernel = host_kernel()
+    amplitude, count = 1 << 23, 4800
+    buffer = (ctypes.c_int * 32)()
+    for tap in (4, 2):
+        for hz, maximum_loss in ((1000, 0.05), (5000, 0.2), (10000, 0.7), (15000, 2.3)):
+            kernel.ob1_vcf_reset(0)
+            output = []
+            for start in range(0, 2 * count, 32):
+                for i in range(32):
+                    buffer[i] = round(amplitude * math.sin(2 * math.pi * hz * (start + i) / M.FS))
+                kernel.ob1_vcf_run(tap, cutoff8, 0, buffer, 0)
+                if start >= count:
+                    output.extend(buffer)
+            real = sum(y * math.cos(2 * math.pi * hz * i / M.FS) for i, y in enumerate(output))
+            imag = sum(y * math.sin(2 * math.pi * hz * i / M.FS) for i, y in enumerate(output))
+            gain = 2 * math.hypot(real, imag) / (count * amplitude * M.LEVEL)
+            loss = -20 * math.log10(gain)
+            assert -0.01 < loss < maximum_loss, (tap, hz, loss, maximum_loss)
+            print('PASS: maximum FREQ, zero RESO/modulation, OB%d at %d Hz: %.3f dB loss' %
+                  (tap, hz, loss))
 
 
 def main():
@@ -44,7 +68,7 @@ unsigned int phase(int voice) { return states[voice].phase; }
         levels = sorted(set(targets))
         assert len(levels) == 64
         assert c.cutoff(-1) == levels[0] and c.cutoff(0x10000) == levels[-1]
-        assert c.cutoff(64 << 8) == 64 << 8
+        assert c.cutoff(0x7f00) == 0x7f00
         pitches = [M.corner_hz(fi8 / 256) for fi8 in levels]
         intervals = [1200 * math.log2(b / a) for a, b in zip(pitches, pitches[1:])]
         assert max(abs(interval - 100) for interval in intervals) < 0.7
@@ -72,6 +96,7 @@ unsigned int phase(int voice) { return states[voice].phase; }
             assert c.phase(voice) == 0
         assert c.step(0, 0x7f00) == c.cutoff(0)
         print('PASS: ten seconds of scan timing, 23/24-block holds, reset and eight independent voices')
+        check_open_response(c.cutoff(0x7f00))
 
 
 if __name__ == '__main__':

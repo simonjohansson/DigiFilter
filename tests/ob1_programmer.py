@@ -66,8 +66,8 @@ def knob_cutoff8(word):
     """Nominal encoder mapping, distinct from the original pot ADC's unresolved edge behavior."""
     code = math.floor(max(0, min(0x7f00, word)) * 63 / 0x7f00 + 0.5)
     # VR and T17 cancel when DAC intervals are normalized to nominal semitones.
-    semitones = (dac_voltage(code, 10.0, 500.0) - dac_voltage(32, 10.0, 500.0)) / 0.075
-    return (64 + semitones * 10.57 / 12) * 256
+    semitones = (dac_voltage(code, 10.0, 500.0) - dac_voltage(63, 10.0, 500.0)) / 0.075
+    return (127 + semitones * 10.57 / 12) * 256
 
 
 def self_check():

@@ -7,14 +7,14 @@ struct ob1_control {
     int cutoff8, fresh;
 };
 
-/* Digitakt FREQ -> 64 DAC words, nominal semitones, keeping FREQ 64 at 327 Hz.
+/* Digitakt FREQ -> 64 DAC words, nominal semitones, keeping the old fully-open endpoint.
  * Q24 stock indices: 10.57 indices/octave; the low bits retain the 301K DAC correction. */
 static inline int ob1_knob_cutoff8(int word)
 {
     int code;
     word = word < 0 ? 0 : word > 0x7f00 ? 0x7f00 : word;
     code = (word * 63 + 0x3f80) / 0x7f00;
-    return ((64 << 24) + (code - 32) * 14777931 - (code & 7) * 4605 + 32768) >> 16;
+    return ((127 << 24) + (code - 63) * 14777931 - ((code & 7) - 7) * 4605 + 32768) >> 16;
 }
 
 static inline int ob1_control_run(struct ob1_control *s, int word)

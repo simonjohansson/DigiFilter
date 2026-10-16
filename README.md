@@ -71,10 +71,12 @@ Everything in this repo builds (`BUILT`), lints against `core` and combines with
 - For **OB4/OB2**, **RESO / GAIN (F)** is the resonance: it self-oscillates from
   about 121, so the filter rings at FREQ even with no input.
   **FREQ** selects 64 approximately semitone-spaced base settings, refreshed at about
-  64.69 Hz. The nominal base range is 51.5 Hz–1.96 kHz, with FREQ 64 at 327 Hz;
+  64.69 Hz. The highest setting retains the previous fully-open endpoint. The
+  per-stage corner range is 535 Hz–20.36 kHz (OB4's overall zero-resonance -3 dB
+  range is approximately 233 Hz–16.22 kHz);
   envelope and LFO modulation remain continuous and can move outside that base range.
-  This changes the cutoff of existing OB4/OB2 sounds. The midpoint is a retained
-  calibration reference, not a measured original OB-1 endpoint; see [the control model](docs/ob1-programmer.md).
+  This changes the cutoff of existing OB4/OB2 sounds. The absolute range is a
+  Digitakt calibration choice, not measured original OB-1 endpoints; see [the control model](docs/ob1-programmer.md).
 - **Second FLTR page**, while TYPE is COMB or TRASH, adds **C = Harmonics**
   (delay divider 1–4) and **G = Damping** (a one-pole on the feedback), each
   shown as a round dial like the stock SRR knob. They sit **alongside** the
