@@ -43,8 +43,6 @@ jobs:
           Path("firmware").mkdir(exist_ok=True)
           Path("firmware/Digitakt_OS1.54.syx").write_bytes(stock)
       - name: Build, lint and check composition
-        env:
-          DIGIFILTER_BUILD_OS: "1.54"
         run: mise run check
       - name: Test
         run: mise run test

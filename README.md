@@ -162,33 +162,40 @@ On Windows, mise downloads the [GCC 14.2.0 toolchain bundle](https://github.com/
 verifies its pinned SHA-256 and adds its `m68k-elf-` compiler and binutils to
 the task PATH. No manual cross-toolchain installation or PATH changes are needed.
 
-Supply your own official `firmware/Digitakt_OS1.53.syx` and
-`firmware/Digitakt_OS1.54.syx`. `build` always builds both OS versions;
-`check`, `firmware`, `emu` and `release` depend on that build.
-Firmware and generated outputs are ignored by Git.
+Supply your own official `firmware/Digitakt_OS1.54.syx`. Builds default to
+OS 1.54; set `DIGIFILTER_BUILD_OS=1.53` to build that OS or `all` for both,
+supplying the matching stock files. Releases explicitly build both versions.
+`check`, `firmware`, `emu` and `test:emu` depend on the build. Firmware and
+generated outputs are ignored by Git.
 
 GitHub Actions runs `mise run check` and `mise run test` on macOS, Windows
 and Linux. CI downloads stock OS 1.54 from Elektron and verifies its SHA-256;
-it sets `DIGIFILTER_BUILD_OS=1.54` for the build because OS 1.53 is no longer
-available at its old official URL. Local builds still target both OS versions
-unless `DIGIFILTER_BUILD_OS` selects one; unset it before a release so both
-are rebuilt. CI skips simulator setup and keeps firmware and generated files
-out of uploaded artifacts.
+it uses the same OS 1.54 default as local builds. CI skips simulator setup
+and keeps firmware and generated files out of uploaded artifacts.
 
 ### Tasks
 
 | command | result |
 |---|---|
-| `mise run build` | Build matching core and DigiFilter elemods for **both** OS versions under `out/os1.53/` and `out/os1.54/`. |
-| `mise run check` | Build both, lint each against its core, and check that each pair combines. |
+| `mise run build` | Build matching core and DigiFilter elemods for the selected OS under `out/os<OS>/` (default 1.54). |
+| `mise run check` | Depend on `build`, then lint DigiFilter against its core and check that they combine. |
 | `mise run test` | Run the workflow tests, floating-point models, native kernel, artefact and measured calibration checks. Calibration uses an isolated NumPy environment. |
+| `mise run test:emu` | Build firmware, then check its cold boot and scripted runtime against stock firmware in the headless emulator. Write the report to `out/os<OS>/test-emu/report.json`. |
 | `mise run bench` | Run the existing per-mode ColdFire instruction benchmark with patched Unicorn. |
 | `mise run firmware` | Build core and DigiFilter for `ELEKLOADER_STOCK`, then write `out/os<OS>/Digitakt_custom.syx`. |
 | `mise run emu` | Build that firmware, set it up in digiemu and open its panel. |
 | `mise run release` | Build and test, require clean source pushed to `origin/master`, then publish both `.elemod` files on GitHub at the current commit with generated release notes. |
 
-The simulator's task chain is `emu → firmware → build`: mise builds both
-OS versions, patches the selected stock OS, then opens its panel.
+The simulator's task chain is `emu → firmware → build`: mise builds the
+mods, patches the selected stock OS, then opens its panel.
+
+`test:emu → firmware → build` uses the same selected stock OS and runs
+digiemu's `emu.fwcheck` with boot, runtime and emulated audio-deadline checks
+enabled. Run `mise bootstrap` first to install patched Unicorn. Each run
+creates fresh test state under `out/os<OS>/test-emu/`, separate from saved
+interactive simulator sessions. The report includes a stock comparison;
+screen/audio differences are reported for inspection, not automatically
+treated as failures. This task does not replace the focused DSP/UI tests.
 
 The native tests and instruction benchmark do not establish firmware
 integration, physical hardware behavior or real-time timing headroom.
@@ -202,6 +209,7 @@ version `DFlt`. Set local preferences in ignored `mise.local.toml`:
 
 ```toml
 [env]
+DIGIFILTER_BUILD_OS = "1.53"
 ELEKLOADER_STOCK = "firmware/Digitakt_OS1.53.syx"
 FW_VERSION = "DFlt"
 # Optional: a different compiler prefix or a full prefix path, without quotes inside the value.
@@ -213,6 +221,7 @@ Environment variables work too. For example, in PowerShell:
 
 ```powershell
 $env:ELEKLOADER_STOCK = 'firmware/Digitakt_OS1.53.syx'
+$env:DIGIFILTER_BUILD_OS = '1.53'
 $env:FW_VERSION = 'DFlt'
 mise run emu
 ```

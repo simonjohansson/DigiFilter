@@ -32,16 +32,20 @@ class Workflows(unittest.TestCase):
             self.assertEqual(tasks.artifact(tasks.ROOT, '1.54').name, 'digifilter-1.1a-os1.54.elemod')
 
     def test_mislabeled_stock_is_rejected_before_building(self):
-        with patch.dict(os.environ, {'DIGIFILTER_BUILD_OS': ''}), \
+        with patch.dict(os.environ, {'DIGIFILTER_BUILD_OS': '1.53'}), \
                 patch.object(tasks, 'stock_os', return_value='1.54'):
             with self.assertRaisesRegex(ValueError, 'does not contain stock OS 1.53'):
                 tasks.stocks()
 
     def test_build_os_selection(self):
-        for selected, expected in (('', ('1.53', '1.54')), ('1.54', ('1.54',))):
+        for selected, expected in ((None, ('1.54',)), ('1.53', ('1.53',)),
+                                   ('1.54', ('1.54',)), ('all', ('1.53', '1.54'))):
             with self.subTest(selected=selected), \
-                    patch.dict(os.environ, {'DIGIFILTER_BUILD_OS': selected}), \
+                    patch.dict(os.environ), \
                     patch.object(tasks, 'stock_os', side_effect=expected):
+                os.environ.pop('DIGIFILTER_BUILD_OS', None)
+                if selected is not None:
+                    os.environ['DIGIFILTER_BUILD_OS'] = selected
                 self.assertEqual(tasks.stocks(), [
                     tasks.ROOT / 'firmware' / f'Digitakt_OS{version}.syx'
                     for version in expected])
@@ -99,18 +103,27 @@ class Workflows(unittest.TestCase):
             self.assertTrue(command[-1].endswith('.dll'))
             load.assert_called_once_with(command[-1])
 
+    def test_emulator_checks_firmware_against_matching_stock_in_separate_state(self):
+        stock = Path('Stock Files') / 'arbitrary name.syx'
+        python = Path('Emulator Files') / 'python.exe'
+        for version in tasks.OS_VERSIONS:
+            with self.subTest(version=version), \
+                    patch.dict(os.environ, {'ELEKLOADER_STOCK': str(stock), 'DIGIEMU_HOME': 'saved sessions'}), \
+                    patch.object(tasks, 'stock_os', return_value=version), \
+                    patch.object(tasks, 'emulator_python', return_value=python), \
+                    patch.object(tasks, 'run') as run:
+                tasks.test_emu()
+                run.assert_called_once_with([
+                    python, '-u', '-m', 'emu.fwcheck', tasks.firmware_path(version),
+                    '--baseline', stock.resolve(),
+                    '--out', tasks.OUT / f'os{version}' / 'test-emu'], cwd=tasks.EMU)
+                self.assertEqual(os.environ['DIGIEMU_HOME'], 'saved sessions')
+
     def test_release_requires_clean_source(self):
         with patch.object(tasks, 'run', return_value=' M filter.c') as run:
             with self.assertRaisesRegex(ValueError, 'commit first'):
                 tasks.release()
             self.assertEqual(run.call_count, 1)
-
-    def test_release_requires_both_os_builds(self):
-        with patch.dict(os.environ, {'DIGIFILTER_BUILD_OS': '1.54'}), \
-                patch.object(tasks, 'run') as run:
-            with self.assertRaisesRegex(ValueError, 'unset DIGIFILTER_BUILD_OS'):
-                tasks.release()
-            run.assert_not_called()
 
     def test_release_stops_when_source_is_not_pushed(self):
         with patch.object(tasks, 'run', side_effect=['', None, 'unpushed commit']) as run:

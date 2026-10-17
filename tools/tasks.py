@@ -33,10 +33,10 @@ def stock_os(stock):
 
 
 def stocks():
-    selected = os.environ.get('DIGIFILTER_BUILD_OS')
-    if selected and selected not in OS_VERSIONS:
-        raise ValueError('DIGIFILTER_BUILD_OS must be 1.53 or 1.54')
-    versions = (selected,) if selected else OS_VERSIONS
+    selected = os.environ.get('DIGIFILTER_BUILD_OS', '1.54')
+    if selected != 'all' and selected not in OS_VERSIONS:
+        raise ValueError('DIGIFILTER_BUILD_OS must be 1.53, 1.54 or all')
+    versions = OS_VERSIONS if selected == 'all' else (selected,)
     result = []
     for version in versions:
         path = ROOT / 'firmware' / f'Digitakt_OS{version}.syx'
@@ -95,9 +95,14 @@ def bootstrap():
     run([python, '-m', 'emu.unicorn_compat'], cwd=EMU)
 
 
+def test_emu():
+    stock = Path(os.environ.get('ELEKLOADER_STOCK', ROOT / 'firmware/Digitakt_OS1.54.syx')).resolve()
+    version = stock_os(stock)
+    run([emulator_python(), '-u', '-m', 'emu.fwcheck', firmware_path(version),
+         '--baseline', stock, '--out', OUT / f'os{version}' / 'test-emu'], cwd=EMU)
+
+
 def release():
-    if os.environ.get('DIGIFILTER_BUILD_OS'):
-        raise ValueError('release: unset DIGIFILTER_BUILD_OS to build both OS versions')
     if run(['git', 'status', '--porcelain'], capture=True):
         raise ValueError("release: commit first, so the release is the source it's tagged on")
     run(['git', 'fetch', '-q', 'origin'])
@@ -111,7 +116,7 @@ def release():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('task', choices=('bootstrap', 'build', 'check', 'bench', 'firmware',
+    parser.add_argument('task', choices=('bootstrap', 'build', 'check', 'test:emu', 'bench', 'firmware',
                                         'emu', 'release'))
     task = parser.parse_args().task
     sys.path.insert(0, str(SDK))
@@ -129,6 +134,8 @@ def main():
             run([*patch_args(stock, version), '--check'])
     elif task == 'bench':
         run([emulator_python(), ROOT / 'tests/df_bench.py'], cwd=EMU)
+    elif task == 'test:emu':
+        test_emu()
     elif task == 'firmware':
         stock = Path(os.environ.get('ELEKLOADER_STOCK', ROOT / 'firmware/Digitakt_OS1.54.syx')).resolve()
         version = stock_os(stock)

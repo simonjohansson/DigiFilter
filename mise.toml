@@ -29,11 +29,11 @@ description = "Fetch pinned dependencies and set up the simulator's patched Unic
 run = ["git submodule update --init", "python tools/tasks.py bootstrap"]
 
 [tasks.build]
-description = "Build core and DigiFilter for OS 1.53 and 1.54"
+description = "Build core and DigiFilter for the selected OS (default 1.54)"
 run = "python tools/tasks.py build"
 
 [tasks.check]
-description = "Build, lint and check composition for both OS versions"
+description = "Lint and check composition for the selected OS after building"
 depends = ["build"]
 run = "python tools/tasks.py check"
 
@@ -52,6 +52,11 @@ run = [
 description = "Count ColdFire instructions using the simulator's patched Unicorn"
 run = "python tools/tasks.py bench"
 
+[tasks."test:emu"]
+description = "Check freshly built firmware in the emulator against stock"
+depends = ["firmware"]
+run = "python tools/tasks.py test:emu"
+
 [tasks.firmware]
 description = "Build custom firmware for ELEKLOADER_STOCK with version FW_VERSION"
 depends = ["build"]
@@ -65,5 +70,5 @@ raw = true
 
 [tasks.release]
 description = "Build, test and release the .elemod for each OS on GitHub"
-depends = ["build", "test"]
+depends = ["DIGIFILTER_BUILD_OS=all build", "test"]
 run = "python tools/tasks.py release"
