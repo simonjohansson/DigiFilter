@@ -21,13 +21,25 @@
  * The FLTR page's FREQ/RES response *curve* is drawn by filter_ui.c, from a
  * core ev_draw handler (digifilter_draw) for TYPE 8..11. See RE_NOTES.md.
  */
+
+/* ---- firmware addresses that moved in OS 1.54 (tools/port_os.py, tools/os154.json) ---- */
+#ifdef OS154
+#define F_4199dc44 0x4199ec44
+#define F_4199df58 0x4199ef58
+#else
+#define F_4199dc44 0x4199dc44
+#define F_4199df58 0x4199df58
+#endif
+/* ---- end of the moved addresses ---- */
+
 typedef int int32;
 typedef unsigned int uint32;
 
 #include "filter_tables.h"
+#include "ob1_vcf.h"
 
 /* ---- firmware (OS 1.53) ---- */
-#define UI_KIT (*(unsigned char *volatile *)0x4199dc44)  /* the kit of the pattern being edited */
+#define UI_KIT (*(unsigned char *volatile *)F_4199dc44)  /* the kit of the pattern being edited */
 
 /* a track's sound block in the kit: 0xa2 bytes at kit + 0x20 + t*0xa2, the 53
  * parameter slots as words at +0x14 + 2*s (TECHNICAL_NOTES, v3e). */
@@ -64,6 +76,10 @@ static const char *const FM_NAME[FM_NMODES] = { "BP", "BP2", "COMB", "TRASH" };
  * 0x40079a60 must not clamp the value away. */
 #define FM_STOCK_TYPES 8
 #define FM_FIRST_TYPE  FM_STOCK_TYPES
+/* The OB-1 modes (ob1_vcf.c, docs/ob1.md) after ours: TYPE 12 OB4, 13 OB2. Kept out of FM_NMODES, so the SVF and
+ * comb code never sees them. */
+#define OB_FIRST_TYPE  (FM_FIRST_TYPE + FM_NMODES)
+#define OB_NTYPES      2
 
 /* ---- the coefficient set the DSP reads (filter_dsp.s) ---- */
 struct fcoef { int32 a1, a2, a3, c0, c1, c2; };
@@ -124,7 +140,7 @@ static void mode_coef(int m, int fi, int qi, struct fcoef *c)
     int32 g = G27[fi], k = K27[m == FM_BP2 ? (qk >> 1) : qk], d24;
     /* band-pass output mix: out = c1 * band  (c0 cancels the input's v0 term) */
     c->c0 = -ONE27;
-    c->c1 = mulsh(k, ONE27, 27);
+    c->c1 = k;              /* mulsh(k, ONE27, 27) == k exactly, k >= 0 */
     c->c2 = 0;
     d24 = (1 << 24) + mulsh(g, g + k, 30);
     c->a1 = div55((uint32)d24);
@@ -239,7 +255,7 @@ static void df_persist(void)
 #define PARAM_CUTOFF(params) (*(volatile unsigned short *)((params) + 2))
 #define PARAM_ENV(params) (*(volatile unsigned short *)((params) + 6))
 #define SET_RESO(v) (*(volatile unsigned short *)(ENGINE(v) + 2 * FS_RESO))
-#define ENV_LEVEL(v) (*(volatile int *)(0x4199DF58 + 12 * (v)))
+#define ENV_LEVEL(v) (*(volatile int *)(F_4199df58 + 12 * (v)))
 
 /* Every sound slot is a word in the render record; slot s is at
  * params + 2s - 0x32 (TYPE s=0x19 is at +0; FREQ 0x1a at +2; ...; the second
@@ -344,6 +360,7 @@ static void comb_run(int32 *buf, int frames, int fi, int fb, int v, int div,
  * the coefficients glide (as the stock filter does). */
 static int svf_fi[8], svf_qi[8];
 static int svf_have[8];
+static struct fcoef svf_c[8];                /* the coefficients at (svf_fi, svf_qi), cached */
 
 /* filter_glue.s: digifilter_dispatch remembers the a3 the render set (the
  * stock filter, or digihealth's wrapper) so stock types keep their target. */
@@ -364,18 +381,56 @@ static int cutoff_index(unsigned char *params, int v)
     return clampi(base >> 8, 0, 127);
 }
 
+/* cutoff_index() without the rounding: 8.8, 0..127 << 8, for the OB-1 modes' fractional cutoff */
+static int cutoff_index8(unsigned char *params, int v)
+{
+    int base = (int)(unsigned)PARAM_CUTOFF(params);       /* index<<8 */
+    int depth = ((int)(unsigned)PARAM_ENV(params) - 0x4000) << 17;
+    if (depth) {
+        int32 env = ENV_LEVEL(v);
+        int32 envmod = mulsh((int32)(0u - (uint32)env), depth, 31);  /* (-env)*depth>>31 */
+        base += envmod >> 16;                             /* to FREQ-word units */
+    }
+    return clampi(base, 0, 127 << 8);
+}
+
 static void svf_run(int m, int fi, int qi, int32 *buf, int v)
 {
-    int fi0 = svf_have[v] ? svf_fi[v] : fi;
-    int qi0 = svf_have[v] ? svf_qi[v] : qi;
     struct fcoef c0, c1;
-    int k;
-    /* Compute the coefficients only at this block's start and end and ramp
-     * between them (2 mode_coef calls, each with its div55) instead of
-     * recomputing them at 4 ramped index points (4 calls). The coefficients
-     * move smoothly with the indices, so a linear ramp is as smooth. */
-    mode_coef(m, fi0, qi0, &c0);
-    mode_coef(m, fi, qi, &c1);
+    int k, same;
+    /* Compute the coefficients only when the cutoff/resonance actually move
+     * (mode_coef runs a 32-step division and several 32x32 muls): cache the
+     * last block's set and reuse it. The common static-knob case then costs no
+     * coefficient work at all and needs a single digifilter_svf call for the
+     * whole 32-frame block instead of four 8-frame calls. When the indices do
+     * move, ramp the one new set from the cached one across the four sub-blocks
+     * (a linear ramp is as smooth as the old four mode_coef points, at 1/2 the
+     * coefficient cost). */
+    if (svf_have[v]) {
+        c0 = svf_c[v];
+        if (svf_fi[v] == fi && svf_qi[v] == qi) {
+            same = 1;
+            c1 = c0;
+        } else {
+            same = 0;
+            mode_coef(m, fi, qi, &c1);
+            svf_c[v] = c1;
+            svf_fi[v] = fi;
+            svf_qi[v] = qi;
+        }
+    } else {
+        mode_coef(m, fi, qi, &c1);            /* first block: no last set to ramp from */
+        svf_c[v] = c1;
+        svf_fi[v] = fi;
+        svf_qi[v] = qi;
+        svf_have[v] = 1;
+        c0 = c1;
+        same = 1;
+    }
+    if (same) {
+        digifilter_svf(buf, 32, (const int32 *)&c1, dsp_st[v]);
+        return;
+    }
     for (k = 0; k < 4; k++) {
         int w = k + 1;                               /* 1..4, ends exactly at c1 */
         int32 *d = (int32 *)&c0, *e = (int32 *)&c1;
@@ -390,9 +445,6 @@ static void svf_run(int m, int fi, int qi, int32 *buf, int v)
         }
         digifilter_svf(buf + 8 * k, 8, (const int32 *)&c, dsp_st[v]);
     }
-    svf_fi[v] = fi;
-    svf_qi[v] = qi;
-    svf_have[v] = 1;
 }
 
 int digifilter_filt(unsigned char *params, int *buf, int active, int voice)
@@ -403,7 +455,18 @@ int digifilter_filt(unsigned char *params, int *buf, int active, int voice)
     (void)active;
     if (voice >= 0 && voice < 8) {
         int type = params[0];
-        int m = type - FM_FIRST_TYPE;
+        int m = type - FM_FIRST_TYPE, ob = type - OB_FIRST_TYPE;
+        if (ob >= 0 && ob < OB_NTYPES) {
+            /* OB4/OB2: the same cutoff (FREQ + the filter envelope) and RESO (0..127) as the combs read */
+            if (prev_filt_type[voice] != type) {
+                if (prev_filt_type[voice] < OB_FIRST_TYPE)          /* from BP..TRASH, or the first time */
+                    ob1_vcf_reset(voice);
+                prev_filt_type[voice] = type;
+            }
+            ob1_vcf_run(ob ? OB1_TAP2 : OB1_TAP4, cutoff_index8(params, voice),
+                        clampi((int)(unsigned)SET_RESO(voice) >> 8, 0, 127), buf, voice);
+            return 1;
+        }
         if (m >= 0 && m < FM_NMODES) {
             /* CUTOFF: params@2 (index<<8) plus the params@6 filter-envelope
              * modulation (cutoff_index), RESO: the engine's slot 0x1b — the

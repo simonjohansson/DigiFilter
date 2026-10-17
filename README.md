@@ -4,7 +4,7 @@ Extra per-track filter modes for the Elektron
 Digitakt mk1 (OS 1.53).
 
 A format-2 [elekloader](https://github.com/irpina/elekloader) mod, id
-`digifilter`. It adds four filter types on top of the stock `OFF / LP / HP /
+`digifilter`. It adds six filter types on top of the stock `OFF / LP / HP /
 EQ:1..5`:
 
 | TYPE | mode | what it is |
@@ -13,6 +13,8 @@ EQ:1..5`:
 | 9 | **BP2** | a wider band pass (about half the resonance) |
 | 10 | **COMB** | feedback comb, delay from FREQ, feedback from RESO |
 | 11 | **TRASH** | second comb at half the delay (a higher harmonic series) |
+| 12 | **OB4** | the Oberheim OB-1's 4-pole lowpass ladder, self-oscillating at the top of RESO |
+| 13 | **OB2** | the OB-1's 2-pole output: 12 dB/oct, resonating from the same 4-pole loop |
 
 Each mode runs per track and uses that track's own FREQ, RESO and filter
 envelope, exactly like the stock types. Stock TYPE values keep running the
@@ -26,19 +28,32 @@ BP2, COMB and TRASH:
 
 ![The FLTR page for LP, BP, BP2, COMB and TRASH](docs/img/fltr-types.png)
 
+**OB4** and **OB2** are modelled on the OB-1's VCF: a ladder of four OTA stages
+with the resonance fed back from the fourth, saturating where the circuit does.
+The FLTR page draws their lowpass response; top to bottom, LP (stock), OB4 and
+OB2. How they were made and checked (SPICE, a model, the fixed-point kernel,
+digiemu, a unit) is in [docs/ob1.md](docs/ob1.md).
+
+Their FREQ control now follows the measured reference curve, from 10 Hz to
+21 kHz with cubic travel. Resonance starts oscillating between RESO 80 and 81.
+Existing OB4/OB2 Sounds therefore change at the same knob settings; their saved
+format is unchanged. See the [calibration and its limits](docs/ob1.md#control-calibration).
+
+![The FLTR page for LP, OB4 and OB2](docs/img/ob1-fltr.png)
+
 > Digitakt **mk1 only**. Digitakt II's filter machines are out of scope.
 
 ## Status
 
-The **audio path is done and validated** (BP / BP2 / COMB / TRASH), including
-the **filter envelope**, the **comb's own controls** (feedback on the RESO/GAIN
-knob, Harmonics/Damping on the free C/G encoders), and the **FLTR page's FREQ/RES
-response curve and TYPE-box glyphs**, which now redraw for the new modes (a
-band-pass bell for BP/BP2, comb teeth for COMB, a trash can for TRASH). The DSP
-is **budgeted at or below the stock filter's cost** per voice per block. See
-[RE_NOTES.md](RE_NOTES.md).
+The **audio path is done and validated** (BP / BP2 / COMB / TRASH and OB4 / OB2),
+including the **filter envelope**, the **comb's own controls** (feedback on the
+RESO/GAIN knob, Harmonics/Damping on the free C/G encoders), and the **FLTR
+page's FREQ/RES response curve and TYPE-box glyphs**, which now redraw for the
+new modes (a band-pass bell for BP/BP2, comb teeth for COMB/TRASH, a lowpass for
+OB4/OB2). See [RE_NOTES.md](RE_NOTES.md).
 
-Stress-tested on hardware over 3 days: **PASS** (a Digitakt mk1).
+Stress-tested on hardware over 3 days: **PASS** (a Digitakt mk1). **1.1a** was
+tested on hardware (Digitakt mk1) on both **OS 1.53** and **OS 1.54**: PASS.
 
 Everything in this repo builds (`BUILT`), lints against `core` and combines with
 `digihealth` (`OK: the mods combine`).
@@ -58,6 +73,8 @@ Everything in this repo builds (`BUILT`), lints against `core` and combines with
   for a metallic, near-self-oscillating ring); the
   **filter envelope (H + ADSR)** modulates the cutoff exactly as the stock types
   do.
+- For **OB4/OB2**, **RESO / GAIN (F)** is the resonance: it self-oscillates from
+  about 121, so the filter rings at FREQ even with no input.
 - **Second FLTR page**, while TYPE is COMB or TRASH, adds **C = Harmonics**
   (delay divider 1–4) and **G = Damping** (a one-pole on the feedback), each
   shown as a round dial like the stock SRR knob. They sit **alongside** the
@@ -73,13 +90,13 @@ Everything in this repo builds (`BUILT`), lints against `core` and combines with
 Three patch sites plus `ev_draw` / `ev_tick` subscriptions (addresses and the
 full reverse-engineering are in [RE_NOTES.md](RE_NOTES.md)):
 
-1. widen the Filter Type range field from max 7 to max 11;
-2. re-point the TYPE label formatter so 8–11 print `BP / BP2 / COMB / TRASH`;
+1. widen the Filter Type range field from max 7 to max 13;
+2. re-point the TYPE label formatter so 8–13 print `BP / BP2 / COMB / TRASH / OB4 / OB2`;
 3. hook the per-voice filter call in the render and run our own DSP for TYPE
-   8–11, tail-calling the stock filter for everything else;
+   8–13, tail-calling the stock filter for everything else;
 4. subscribe to core's `ev_draw` (`digifilter_draw`, order 40): after the page
    has drawn, when the shown page kind is FLTR (6) and the active track's TYPE
-   is 8–11, mask the stock graph and TYPE box and paint the BP/BP2/COMB/TRASH
+   is 8–13, mask the stock graph and TYPE box and paint the BP/BP2/COMB/TRASH/OB4/OB2
    response curve plus the mode's small TYPE-box glyph.
    (This composes with the event chain; patching the page drawView vtable entry
    `0x401842a0` directly lost the curve in multi-mod builds.)
@@ -95,21 +112,32 @@ full reverse-engineering are in [RE_NOTES.md](RE_NOTES.md)):
    but no value widget, since their slot is past the model's range.
 
 Our DSP is integer-only (no FPU, no libgcc): a trapezoidal state-variable
-filter for BP/BP2 and two feedback combs for COMB/TRASH. The cutoff and
-resonance are smoothed (a coefficient ramp across the block, and a fractional,
-smoothed comb delay) so modulating the filter does not step or click. The
-filter envelope is added to the cutoff exactly as the stock filter does.
+filter for BP/BP2, two feedback combs for COMB/TRASH, and a zero-delay-feedback
+OTA ladder for OB4/OB2. The cutoff and resonance are smoothed (a coefficient ramp
+across the block, and a fractional, smoothed comb delay) so modulating the filter
+does not step or click. The filter envelope is added to the cutoff exactly as the
+stock filter does.
 
-Per voice per render block (measured in digiemu), TYPE 1 (stock) costs ~2400
-instructions; BP/BP2 ~2800; COMB/TRASH ~1750 — so the new modes are no more
-expensive than the stock filter. The SVF computes its coefficients at the
-block's two ends and ramps between them, and the comb's interpolation and
-feedback each use a single 32×32 multiply.
+Per voice per render block (measured in digiemu / `tests/df_bench.py`), TYPE 1
+(stock) costs ~2400 instructions; **BP/BP2 ~1200 with static knobs and ~2400
+while the cutoff is swept** (the coefficients are cached and only recomputed when
+the cutoff/resonance actually move); COMB/TRASH ~1730; OB4/OB2 ~3000. So BP/BP2
+are now cheaper than the stock filter when the knobs are still, and every mode
+stays within the stock filter's own order. The SVF caches its coefficients, the
+OB-1 ladder computes them at the block's ends and ramps between them, and the
+comb's interpolation and feedback each use a single 32×32 multiply.
 
 ## Building
 
-Needs the m68k cross toolchain, an elekloader checkout, the stock
-`Digitakt_OS1.53.syx`, and `core` (2.1). Set up the shell, then build:
+The mod builds for **OS 1.53 and OS 1.54** from one source tree: `mod.json`
+carries a `"ports": {"1.54": …}` block (the moved firmware addresses and the
+site bytes, generated with `tools/port_os.py` from the DigiFilter ecosystem) and
+the sources name each moved address through an `F_…`/`.LF_…` macro that resolves
+per OS. The 1.53 build is byte-for-byte the same as before the port.
+
+Needs the m68k cross toolchain, an elekloader checkout, a stock OS `.syx`, and
+`core`. Set up the shell, then build (1.53 shown; use the 1.54 stock and a 1.54
+`core` for the other):
 
 ```sh
 export PATH="<m68k-elf bin>:$PATH"          # e.g. C:\SysGCC\m68k-elf\bin on Windows
@@ -117,12 +145,15 @@ export ELEKLOADER_CROSS=m68k-elf-
 export PYTHONPATH="<elekloader checkout>"
 
 python -m elekloader.sdk.build . --stock <Digitakt_OS1.53.syx>
-python -m elekloader.lint  out/digifilter-1.0k.elemod --stock <Digitakt_OS1.53.syx> --with <core-2.1.elemod>
-python -m elekloader.patch --stock <Digitakt_OS1.53.syx> --mod <core-2.1.elemod> --mod out/digifilter-1.0k.elemod --out custom.syx --version 2.0t --check
+python -m elekloader.lint  out/digifilter-1.1a.elemod --stock <Digitakt_OS1.53.syx> --with <core.elemod>
+python -m elekloader.patch --stock <Digitakt_OS1.53.syx> --mod <core.elemod> --mod out/digifilter-1.1a.elemod --out custom.syx --version 2.0t --check
 ```
 
-That must print `BUILT`, then `OK: links as core 2.1 …`, then `OK: the mods
-combine`. Drop `--check` on the last command to write `custom.syx`.
+That must print `BUILT`, then `OK: links as core …`, then `OK: the mods
+combine`. Drop `--check` on the last command to write `custom.syx`. Building
+against the **OS 1.54** stock selects the port automatically (elekloader 0.5+;
+it needs a stock file whose sha256 matches the release, so use the official
+`Digitakt_OS1.54.syx`).
 
 `core` is elekloader's `mods/core` (built, or its release). Add
 `--with <digihealth.elemod>` / `--mod <digihealth.elemod>` if you use it — the
@@ -138,17 +169,26 @@ third site is chosen so this mod does **not** overlap digihealth 1.0.
 | `filter_glue.s` | the raw site entry points (labels + the per-voice dispatcher) |
 | `filter_ui.c` | the `ev_draw` handler (`digifilter_draw`: response curve, TYPE glyph, page-2 dials) and the page-2 `ev_tick` re-map (`digifilter_page2_sync`) |
 | `filter_tables.h` | `g`, `k`, frequency and comb-delay tables |
+| `ob1_vcf.c`, `ob1_vcf.h`, `ob1_tables.h` | OB4/OB2: the OB-1 ladder and its tables; its model, checks, SPICE circuit and digiemu tests are `tests/ob1_*`, `tests/spice/` and `tests/digiemu_filter_ob1_*` ([docs/ob1.md](docs/ob1.md)) |
 | `tests/filter_model.py` | floating-point reference (`svf_block`, `comb_gain`) |
+| `tests/df_bench.py`, `tests/df_bench.c` | per-voice instructions-per-block bench for every mode (Unicorn) |
 | `tests/digiemu_filter_*.py` | headless digiemu traces/tests (need a digiemu checkout) |
 | `tools/disas.py` | disassembly helper (`m68k-elf-objdump -m m68k:cfv4e`) |
 | `tools/re_locate.py`, `tools/emu_filter.py` | early image/unicorn helpers |
-| `RE_NOTES.md` | the reverse-engineering findings |
+| `RE_NOTES.md` | the reverse-engineering findings (and the 1.1a optimization ledger, §13) |
+| `HANDOFF-OPTIMIZATION.md` | the 1.1a performance pass: what changed, how measured and verified |
 
 ## Testing
+
+The OB4/OB2 [validation commands](docs/ob1.md#files) cover the native kernel,
+measured calibration targets and focused ColdFire/firmware simulator checks.
 
 ```powershell
 # floating-point model self-test (no toolchain needed)
 python tests/filter_model.py
+
+# per-voice cost bench (needs m68k-elf-gcc + digiemu's Unicorn):
+python tests/df_bench.py
 
 # live tests in digiemu (need a digiemu source checkout + a set-up firmware)
 python tests/digiemu_filter_dsp.py  --digiemu <checkout> --fw <folder> --type 8
@@ -157,6 +197,25 @@ python tests/digiemu_filter_cutoff.py --digiemu <checkout> --fw <folder>
 python tests/digiemu_filter_curve.py --digiemu <checkout> --fw <folder>
 python tests/digiemu_filter_page2.py --digiemu <checkout> --fw <folder>
 ```
+
+## Releases
+
+Prebuilt packages live in [`releases/`](releases/README.md) and on the
+[GitHub Releases page](https://github.com/DigiAlchemydsp/DigiFilter/releases).
+The current one, **`DigiFilter-1.1a.zip`**, carries **both OS builds** —
+`elemods/digifilter-1.1a.elemod` for **OS 1.53** and
+`elemods/digifilter-1.1a-os1.54.elemod` for **OS 1.54** — plus the sources,
+docs and the install/build README. `releases/elemods/` also keeps the older
+elemods (1.1, 1.0k, 1.0j, 1.0i, 1.0h).
+
+## Credits
+
+- **Digital Alchemy DSP** — the mod: the band-pass **BP / BP2** (state-variable),
+  **COMB** and **TRASH** modes, the per-voice DSP and the FLTR-page response
+  curve.
+- **Simon Johansson** — the **OB4** and **OB2** modes: the Oberheim
+  OB-1's VCF as a zero-delay-feedback ladder and its 2-pole output, from his
+  SPICE study of the circuit (see [docs/ob1.md](docs/ob1.md)).
 
 ## Licence
 
