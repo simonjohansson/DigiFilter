@@ -142,7 +142,7 @@ Native build prerequisites depend on your OS:
 |---|---|
 | macOS | Xcode Command Line Tools (`xcode-select --install`). Bootstrap installs the m68k toolchain through mise's Homebrew package support on Apple Silicon; Intel Macs need an existing m68k toolchain on PATH. |
 | Linux | A native C/C++ toolchain, Make and `shasum` (Perl Digest::SHA). Bootstrap installs `build-essential` on Debian/Ubuntu and the m68k toolchain through mise's Homebrew package support. On other distributions install the native prerequisites with your package manager. |
-| Windows | A native `m68k-elf-` toolchain with ColdFire support, such as SysGCC, on PATH; Visual Studio 2022 C++ Build Tools for the simulator's patched Unicorn; and native MinGW-w64 GCC for host DSP tests. Set `CC` to the native GCC executable if it is not named `gcc` on PATH. MSVC cannot compile the DSP's GNU C extensions. |
+| Windows | Visual Studio 2022 C++ Build Tools for the simulator's patched Unicorn, and native MinGW-w64 GCC for host DSP tests. Set `CC` to the native GCC executable if it is not named `gcc` on PATH. MSVC cannot compile the DSP's GNU C extensions. Mise installs the m68k compiler and binutils automatically. |
 
 From a Git checkout:
 
@@ -157,6 +157,10 @@ patched Unicorn in its own Python environment. Bootstrap uses the upstream
 PowerShell installer on Windows and shell installer on Unix. It is safe to
 repeat: a compatible Unicorn is kept. Normal simulator/benchmark tasks use
 that environment directly, without syncing over its patched library.
+
+On Windows, mise downloads the [GCC 14.2.0 toolchain bundle](https://github.com/iratahack/m68k-elf-gcc/releases/tag/v14.2.0_latest),
+verifies its pinned SHA-256 and adds its `m68k-elf-` compiler and binutils to
+the task PATH. No manual cross-toolchain installation or PATH changes are needed.
 
 Supply your own official `firmware/Digitakt_OS1.53.syx` and
 `firmware/Digitakt_OS1.54.syx`. `build` always builds both OS versions;

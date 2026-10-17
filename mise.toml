@@ -4,6 +4,14 @@ uv = "0.11.8"
 cmake = "4.4.4"
 gh = "2.94.0"
 
+[tools."http:m68k-elf"]
+version = "14.2.0"
+os = ["windows"]
+url = "https://github.com/iratahack/m68k-elf-gcc/releases/download/v{{ version }}_latest/i686-w64-mingw32.zip"
+checksum = "sha256:b7cde7adb002ea7bce2ee2cd6c97f26459d126c64966b9f67e57c47c0bc98af7"
+strip_components = 1
+bin_path = "bin"
+
 [bootstrap.packages]
 "brew:m68k-elf-gcc" = "latest"
 "brew:m68k-elf-binutils" = "latest"
