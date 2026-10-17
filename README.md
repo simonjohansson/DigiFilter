@@ -169,7 +169,7 @@ supplying the matching stock files. Releases explicitly build both versions.
 generated outputs are ignored by Git.
 
 GitHub Actions runs `mise run check`, `mise run test` and `mise run test:emu`
-on macOS 26, Windows Server 2025 and Ubuntu 26.04. CI runs the full bootstrap
+on macOS 26, Windows Server 2022 and Ubuntu 26.04. CI runs the full bootstrap
 to install patched Unicorn, downloads stock OS 1.54 from Elektron and verifies
 its SHA-256. A job after the matrix compares the generated firmware SHA-256
 from all three runners and fails if any checksum is missing or different.
