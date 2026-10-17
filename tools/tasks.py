@@ -61,8 +61,6 @@ def build(stock):
 
 
 def patch_args(stock, version):
-    if os.environ.get('DIGIFILTER_BUILD_OS', '1.54') not in (version, 'all'):
-        raise ValueError(f'ELEKLOADER_STOCK is OS {version}; set DIGIFILTER_BUILD_OS={version} or all')
     return [sys.executable, '-m', 'elekloader.patch', '--stock', stock,
             '--mod', artifact(SDK / 'mods/core', version),
             '--mod', artifact(ROOT, version), '--out', firmware_path(version),

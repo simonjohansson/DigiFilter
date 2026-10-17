@@ -55,11 +55,6 @@ class Workflows(unittest.TestCase):
                 tasks.stocks()
             identify.assert_not_called()
 
-    def test_firmware_rejects_stock_that_does_not_match_the_build(self):
-        with patch.dict(os.environ, {'DIGIFILTER_BUILD_OS': '1.54'}):
-            with self.assertRaisesRegex(ValueError, 'set DIGIFILTER_BUILD_OS=1.53'):
-                tasks.patch_args(Path('older stock.syx'), '1.53')
-
     def test_stock_device_and_os_are_validated_by_content(self):
         devices = Mock()
         device, release = Mock(key='digitakt-mk1'), Mock(version='1.53')

@@ -164,9 +164,7 @@ the task PATH. No manual cross-toolchain installation or PATH changes are needed
 
 Supply your own official `firmware/Digitakt_OS1.54.syx`. Builds default to
 OS 1.54; set `DIGIFILTER_BUILD_OS=1.53` to build that OS or `all` for both,
-supplying the matching stock files. For firmware and emulator tasks, select
-the same OS with `ELEKLOADER_STOCK`; mismatches are rejected. Releases
-explicitly build both versions.
+supplying the matching stock files. Releases explicitly build both versions.
 `check`, `firmware`, `emu` and `test:emu` depend on the build. Firmware and
 generated outputs are ignored by Git.
 
