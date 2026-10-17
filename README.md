@@ -167,6 +167,14 @@ Supply your own official `firmware/Digitakt_OS1.53.syx` and
 `check`, `firmware`, `emu` and `release` depend on that build.
 Firmware and generated outputs are ignored by Git.
 
+GitHub Actions runs `mise run check` and `mise run test` on macOS, Windows
+and Linux. CI downloads stock OS 1.54 from Elektron and verifies its SHA-256;
+it sets `DIGIFILTER_BUILD_OS=1.54` for the build because OS 1.53 is no longer
+available at its old official URL. Local builds still target both OS versions
+unless `DIGIFILTER_BUILD_OS` selects one; unset it before a release so both
+are rebuilt. CI skips simulator setup and keeps firmware and generated files
+out of uploaded artifacts.
+
 ### Tasks
 
 | command | result |

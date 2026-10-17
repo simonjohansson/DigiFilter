@@ -33,8 +33,12 @@ def stock_os(stock):
 
 
 def stocks():
+    selected = os.environ.get('DIGIFILTER_BUILD_OS')
+    if selected and selected not in OS_VERSIONS:
+        raise ValueError('DIGIFILTER_BUILD_OS must be 1.53 or 1.54')
+    versions = (selected,) if selected else OS_VERSIONS
     result = []
-    for version in OS_VERSIONS:
+    for version in versions:
         path = ROOT / 'firmware' / f'Digitakt_OS{version}.syx'
         if stock_os(path) != version:
             raise ValueError(f'{path} does not contain stock OS {version}')
@@ -92,6 +96,8 @@ def bootstrap():
 
 
 def release():
+    if os.environ.get('DIGIFILTER_BUILD_OS'):
+        raise ValueError('release: unset DIGIFILTER_BUILD_OS to build both OS versions')
     if run(['git', 'status', '--porcelain'], capture=True):
         raise ValueError("release: commit first, so the release is the source it's tagged on")
     run(['git', 'fetch', '-q', 'origin'])
