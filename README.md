@@ -168,10 +168,11 @@ supplying the matching stock files. Releases explicitly build both versions.
 `check`, `firmware`, `emu` and `test:emu` depend on the build. Firmware and
 generated outputs are ignored by Git.
 
-GitHub Actions runs `mise run check` and `mise run test` on macOS, Windows
-and Linux. CI downloads stock OS 1.54 from Elektron and verifies its SHA-256;
-it uses the same OS 1.54 default as local builds. CI skips simulator setup
-and keeps firmware and generated files out of uploaded artifacts.
+GitHub Actions runs `mise run check`, `mise run test` and `mise run test:emu`
+on macOS, Windows and Linux. CI runs the full bootstrap to install patched
+Unicorn, downloads stock OS 1.54 from Elektron and verifies its SHA-256.
+It uses the same OS 1.54 default as local builds and keeps firmware and
+generated files out of uploaded artifacts.
 
 ### Tasks
 

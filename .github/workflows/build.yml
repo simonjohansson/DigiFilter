@@ -12,7 +12,7 @@ jobs:
   check:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -24,8 +24,6 @@ jobs:
       - uses: jdx/mise-action@v5
         with:
           bootstrap: true
-          # Build and host tests do not need the simulator environment.
-          bootstrap_skip: task
       - name: Download stock OS 1.54
         run: curl --fail --location --retry 3 --output Digitakt_OS1.54_dist.zip https://www.elektron.se/wp-content/uploads/2026/10/Digitakt_OS1.54_dist.zip
       - name: Verify and extract stock OS
@@ -46,3 +44,5 @@ jobs:
         run: mise run check
       - name: Test
         run: mise run test
+      - name: Emulator test
+        run: mise run test:emu
